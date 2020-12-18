@@ -35,6 +35,8 @@ EnvelopeWidgetDrawingArea::EnvelopeWidgetDrawingArea(GeonkickWidget *parent, Geo
           , hideEnvelope{false}
           , kickGraphImage{nullptr}
           , kickGraphics{nullptr}
+          , zoomInVal{1}
+          , isDragging{false}
 {
         setFixedSize(850, 300);
         int padding = 50;
@@ -120,9 +122,15 @@ std::string EnvelopeWidgetDrawingArea::getEnvStateText() const
 
 void EnvelopeWidgetDrawingArea::mouseButtonPressEvent(RkMouseEvent *event)
 {
-        if (event->button() != RkMouseEvent::ButtonType::Right
-            && event->button() != RkMouseEvent::ButtonType::Left)
+        isDragging = false;
+        if (event->button() == RkMouseEvent::ButtonType::WheelUp
+            || event->button() == RkMouseEvent::ButtonType::WheelDown) {
+                zoomIn(event->button() == RkMouseEvent::ButtonType::WheelUp ? 1 : -1);
                 return;
+        } else if (event->button() != RkMouseEvent::ButtonType::Right
+                   && event->button() != RkMouseEvent::ButtonType::Left) {
+                return;
+        }
 
         RkPoint point(event->x() - drawingArea.left(),
                       drawingArea.bottom() - event->y());
@@ -138,9 +146,27 @@ void EnvelopeWidgetDrawingArea::mouseButtonPressEvent(RkMouseEvent *event)
                         currentEnvelope->selectPoint(point);
                         if (currentEnvelope->hasSelected())
                                 update();
+                        else
+                                isDragging = true;
                 }
         }
         setFocus(true);
+}
+
+void EnvelopeWidgetDrawingArea::zoomIn(int zoom)
+{
+        zoomInVal += zoom;
+        if (zoomInVal > 60) {
+                zoomInVal = 60;
+                return;
+        } else if (zoomInVal < 0) {
+                zoomInVal = 0;
+                return;
+        }
+        double zoomFactor = pow(1.04, zoomInVal);
+        currentEnvelope->setZoomFactor(zoomFactor);
+        kickGraphics->setZoomFactor(zoomFactor);
+        update();
 }
 
 void EnvelopeWidgetDrawingArea::mouseButtonReleaseEvent(RkMouseEvent *event)
@@ -148,6 +174,7 @@ void EnvelopeWidgetDrawingArea::mouseButtonReleaseEvent(RkMouseEvent *event)
         if (!currentEnvelope)
                 return;
 
+        isDragging = false;
         auto toUpdate = false;
         if (currentEnvelope->hasSelected()) {
                 currentEnvelope->unselectPoint();
@@ -163,6 +190,13 @@ void EnvelopeWidgetDrawingArea::mouseButtonReleaseEvent(RkMouseEvent *event)
 
 void EnvelopeWidgetDrawingArea::mouseDoubleClickEvent(RkMouseEvent *event)
 {
+        isDragging = false;
+        if (event->button() == RkMouseEvent::ButtonType::WheelUp
+            || event->button() == RkMouseEvent::ButtonType::WheelDown) {
+                zoomIn(event->button() == RkMouseEvent::ButtonType::WheelUp ? 1 : -1);
+                return;
+        }
+
         if (event->button() == RkMouseEvent::ButtonType::Left) {
                 RkPoint point(event->x() - drawingArea.left(), drawingArea.bottom() - event->y());
                 if (currentEnvelope) {
@@ -180,7 +214,9 @@ void EnvelopeWidgetDrawingArea::mouseMoveEvent(RkMouseEvent *event)
 
         RkPoint point(event->x() - drawingArea.left(), drawingArea.bottom() - event->y());
         if (currentEnvelope->hasSelected()) {
-                currentEnvelope->moveSelectedPoint(point.x(), point.y());
+                int dx = event->x() - mousePoint.x();
+                int dy = event->y() - mousePoint.y();
+                currentEnvelope->moveSelectedPoint(dx, dy);
                 mousePoint.setX(event->x());
                 mousePoint.setY(event->y());
                 update();
@@ -189,8 +225,20 @@ void EnvelopeWidgetDrawingArea::mouseMoveEvent(RkMouseEvent *event)
 
 	auto overPoint = currentEnvelope->hasOverPoint();
         currentEnvelope->overPoint(point);
-	if (overPoint != currentEnvelope->hasOverPoint())
+	if (overPoint != currentEnvelope->hasOverPoint()) {
 		update();
+                return;
+        }
+
+        if (zoomInVal > 1 && isDragging) {
+                int dx = event->x() - mousePoint.x();
+                int dy = event->y() - mousePoint.y();
+                currentEnvelope->moveOrigin(dx, dy);
+                mousePoint.setX(event->x());
+                mousePoint.setY(event->y());
+                kickGraphics->moveOrigin(point.x(), point.y());
+                update();
+        }
 }
 
 void EnvelopeWidgetDrawingArea::envelopeUpdated()

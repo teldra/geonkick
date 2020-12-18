@@ -34,6 +34,7 @@ KickGraph::KickGraph(RkObject *parent, GeonkickApi *api, const RkSize &size)
         , graphSize{size}
         , isRunning{true}
         , updateGraph{true}
+        , zoomFactor{1.0}
 {
         RK_ACT_BIND(geonkickApi, kickUpdated, RK_ACT_ARGS(), this, updateGraphBuffer());
 }
@@ -62,6 +63,17 @@ void KickGraph::updateGraphBuffer()
         threadConditionVar.notify_one();
 }
 
+void KickGraph::setZoomFactor(double factor)
+{
+        std::unique_lock<std::mutex> lock(graphMutex);
+        zoomFactor = factor;
+        threadConditionVar.notify_one();
+}
+
+void KickGraph::moveOrigin(int dx, int dy)
+{
+}
+
 void KickGraph::drawKickGraph()
 {
         while (isRunning) {
@@ -83,8 +95,9 @@ void KickGraph::drawKickGraph()
                 RkPen pen(RkColor(59, 130, 4, 255));
                 painter.setPen(pen);
 
-                std::vector<RkPoint> graphPoints(kickBuffer.size());
-                gkick_real k = static_cast<gkick_real>(graphSize.width()) / kickBuffer.size();
+                size_t graphBuffSize = kickBuffer.size() / zoomFactor;
+                std::vector<RkPoint> graphPoints(graphBuffSize);
+                gkick_real k = static_cast<gkick_real>(graphSize.width()) / graphBuffSize;
 
                 /**
                  * In this loop there is an implementation of an
@@ -94,7 +107,7 @@ void KickGraph::drawKickGraph()
                  */
                 int j = 0;
                 RkPoint prev;
-                for (decltype(kickBuffer.size()) i = 0; i < kickBuffer.size(); i++) {
+                for (decltype(graphBuffSize) i = 0; i < graphBuffSize; i++) {
                         int x = k * i;
                         int y = graphSize.height() * 0.5 * (1 - kickBuffer[i]);
                         RkPoint p(k * i, graphSize.height() * 0.5 * (1 - kickBuffer[i]));
@@ -125,11 +138,11 @@ void KickGraph::drawKickGraph()
                 }
                 graphPoints.resize(j);
                 painter.drawPolyline(graphPoints);
-                if (eventQueue()) {
-                        auto act = std::make_unique<RkAction>(this);
-                        act->setCallback([this, graphImage](void){ graphUpdated(graphImage); });
-                        eventQueue()->postAction(std::move(act));
-                }
+                auto act = std::make_unique<RkAction>(this);
+                act->setCallback([this, graphImage](void){graphUpdated(graphImage);});
+                graphImage.reset();
+                eventQueue()->postAction(std::move(act));
                 updateGraph = false;
         }
 }
+

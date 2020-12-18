@@ -28,6 +28,7 @@
 
 #include <RkPainter.h>
 #include <RkRealPoint.h>
+#include <RkImage.h>
 
 #include <memory>
 #include <unordered_set>
@@ -62,7 +63,7 @@ class Envelope : public RkObject
         bool hasOverPoint() const;
         void selectPoint(const RkPoint &point);
         void unselectPoint(void);
-        void moveSelectedPoint(int x, int y);
+        void moveSelectedPoint(int dx, int dy);
         void addPoint(const RkPoint &point);
         void removePoint(const RkPoint &point);
         Category category() const;
@@ -90,6 +91,8 @@ class Envelope : public RkObject
                      envelopeUpdated(),
                      RK_ARG_TYPE(),
                      RK_ARG_VAL());
+        void setZoomFactor(double factor);
+        void moveOrigin(int dx, int dy);
 
  protected:
         virtual void pointAddedEvent(double x, double y) = 0;
@@ -126,6 +129,9 @@ class Envelope : public RkObject
         bool pointSelected;
         Category envelopeCategory;
         Type envelopeType;
+        float zoomFactor;
+        RkPoint originPoint;
+        RkImage envelopeImage;
 };
 
 #endif // GEONKICK_ENVELOPE_H

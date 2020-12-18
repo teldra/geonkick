@@ -43,6 +43,10 @@ Envelope::Envelope(const RkRect &area)
         , pointSelected{false}
         , envelopeCategory{Category::Oscillator1}
         , envelopeType{Type::Amplitude}
+        , zoomFactor{1.0}
+        , envelopeImage{drawingArea.width() }
+        , envelopeTimeScale{std::make_unique<LinearScale>((ScaleAbstract::Horizontal))}
+        , envelopeTimeScale{std::make_unique<TimeScale>()}
 {
 }
 
@@ -67,8 +71,11 @@ void Envelope::draw(RkPainter &painter, DrawLayer layer)
                 drawAxies(painter);
                 drawScale(painter);
         } else if (layer == DrawLayer::Envelope) {
-                drawPoints(painter);
-                drawLines(painter);
+                RkPainter paint(&envelopeImage);
+                paint.fillRect({0, 0, 0, 255});
+                drawPoints(paint);
+                drawLines(paint);
+                painter.drawImage();
         }
 }
 
@@ -79,8 +86,14 @@ void Envelope::drawAxies(RkPainter & painter)
         pen.setWidth(1);
         painter.setPen(pen);
         RkPoint point = getOrigin();
-        painter.drawLine(point.x(), point.y(), point.x() + W() + 10, point.y());
-        painter.drawLine(point.x(), point.y(), point.x(), point.y() - H() - 10);
+        painter.drawLine(point.x(),
+                         point.y(),
+                         (point.x() + W() + 10),
+                         point.y());
+        painter.drawLine(point.x(),
+                         point.y(),
+                         point.x(),
+                         (point.y() - H() - 10));
 }
 
 void Envelope::drawScale(RkPainter &painter)
@@ -302,8 +315,7 @@ void Envelope::drawLines(RkPainter &painter)
         auto origin = getOrigin();
 	for (const auto& point : envelopePoints) {
                 auto scaledPoint = scaleUp(point);
-	        points.push_back(RkPoint(origin.x() + scaledPoint.x(),
-                                        origin.y() - scaledPoint.y()));
+	        points.push_back(RkPoint(origin.x() + scaledPoint.x(), origin.y() - scaledPoint.y()));
 	}
 
 	auto pen = painter.pen();
@@ -378,26 +390,24 @@ double Envelope::getRightPointLimit(void) const
 	return x;
 }
 
-void Envelope::moveSelectedPoint(int x, int y)
+void Envelope::moveSelectedPoint(int dx, int dy)
 {
         if (!pointSelected || envelopePoints.empty())
 		return;
 
-        auto scaledPoint = scaleDown(RkPoint(x, y));
+        RkRealPoint dPoint = scaleDown({dx, dy});
         auto &selectedPoint = envelopePoints[selectedPointIndex];
-	if (scaledPoint.x() < getLeftPointLimit())
+        selectedPoint.setX(selectedPoint.x() + dPoint.x());
+        selectedPoint.setY(selectedPoint.y() - dPoint.y());
+	if (selectedPoint.x() < getLeftPointLimit())
                 selectedPoint.setX(getLeftPointLimit());
-	else if (scaledPoint.x() > getRightPointLimit())
+	else if (selectedPoint.x() > getRightPointLimit())
                 selectedPoint.setX(getRightPointLimit());
-	else
-                selectedPoint.setX(scaledPoint.x());
 
-	if (y < 0)
+        if (selectedPoint.y() < 0)
                 selectedPoint.setY(0);
-	else if (y > H())
+	else if  (selectedPoint.y() > 1)
                 selectedPoint.setY(1);
-	else
-                selectedPoint.setY(scaledPoint.y());
 
         pointUpdatedEvent(selectedPointIndex, selectedPoint.x(), selectedPoint.y());
 }
@@ -512,44 +522,33 @@ void Envelope::setDrawingArea(const RkRect &rect)
 
 RkRealPoint Envelope::scaleDown(const RkPoint &point)
 {
-        RkRealPoint scaledPoint;
-        if (type() == Type::Amplitude
-            || type() == Type::DistortionDrive
-            || type() == Type::DistortionVolume
-            || type() == Type::PitchShift) {
-                scaledPoint = RkRealPoint(static_cast<double>(point.x()) / W(),
-                                          static_cast<double>(point.y()) / H());
-        } else {
-                scaledPoint.setX(static_cast<double>(point.x()) / W());
-                double logVal = (static_cast<double>(point.y()) / H()) * (log10(envelopeAmplitude()) - log10(20));
+        double x = (static_cast<double>(point.x()) / W()) / zoomFactor;
+        double y = (static_cast<double>(point.y()) / H()) / zoomFactor;
+        if (type() == Type::Frequency || type() == Type::FilterCutOff) {
+                double logVal = y * (log10(envelopeAmplitude()) - log10(20));
                 double val = pow(10, logVal + log10(20));
-                scaledPoint.setY(val / envelopeAmplitude());
+                y = val / envelopeAmplitude();
         }
 
-        return scaledPoint;
+        return {x, y};
 }
 
 RkPoint Envelope::scaleUp(const RkRealPoint &point)
 {
-        int x, y;
-        if (type() == Type::Amplitude
-            || type() == Type::DistortionDrive
-            || type() == Type::DistortionVolume
-            || type() == Type::PitchShift) {
-                x = point.x() * W();
-                y = point.y() * H();
-        } else {
-                x = static_cast<int>(point.x() * W());
+        int x = zoomFactor * point.x() * W() + originPoint.x();
+        int y = zoomFactor * point.y() * H() + originPoint.y();
+        if (type() == Type::Frequency || type() == Type::FilterCutOff) {
                 double logRange = log10(envelopeAmplitude()) - log10(20);
                 double k = 0;
                 if (point.y() > 0) {
-                        double logValue = log10(envelopeAmplitude() * point.y()) - log10(20);
+                        double logValue = log10(envelopeAmplitude() * point.y())
+                                - log10(20);
                         if (logValue > 0)
                                 k = logValue / logRange;
                 }
-                y = k * H();
+                y = zoomFactor * k * H();
         }
-        return RkPoint(x, y);
+        return {x, y};
 }
 
 bool Envelope::hasPoint(const RkRealPoint &point, const RkPoint &p)
@@ -558,7 +557,6 @@ bool Envelope::hasPoint(const RkRealPoint &point, const RkPoint &p)
         int r = getPointRadius();
 	if (pow(p.x() - scaledPoint.x(), 2) + pow(p.y() - scaledPoint.y(), 2) < pow(r, 2))
                 return true;
-
 	return false;
 }
 
@@ -593,38 +591,58 @@ std::string Envelope::frequencyToNote(rk_real f)
                 n++;
         }
 
+        constexpr std::array<double, 17> pitches {
+                                                  16.35160,
+                                                  17.32391,
+                                                  18.35405,
+                                                  19.44544,
+                                                  20.60172,
+                                                  21.82676,
+                                                  23.12465,
+                                                  24.49971,
+                                                  25.95654,
+                                                  27.50000,
+                                                  29.13524,
+                                                  30.86771};
+	constexpr std::array<const char*, 12> notes{
+                                                    "C",
+                                                    "C#",
+                                                    "D",
+                                                    "D#",
+                                                    "E",
+                                                    "F",
+                                                    "F#",
+                                                    "G",
+                                                    "G#",
+                                                    "A",
+                                                    "A#",
+                                                    "B"};
         int octave = n;
-        std::vector<double> pitches {
-		        16.35160,
-                        17.32391,
-                        18.35405,
-			19.44544,
-                        20.60172,
-                        21.82676,
-                        23.12465,
-                        24.49971,
-                        25.95654,
-                        27.50000,
-                        29.13524,
-                        30.86771};
-	std::vector<std::string> notes{
-		        "C",
-			"C#",
-			"D",
-			"D#",
-			"E",
-			"F",
-			"F#",
-			"G",
-			"G#",
-			"A",
-			"A#",
-			"B"};
         n = 12;
         while (--n && pitches[n] > f);
         if (n < 11 && f > (pitches[n + 1] - pitches[n]) / 2)
                 n++;
 
-        return "(" + notes[n] + std::to_string(octave) + ")";
+        return "(" + std::string(notes[n]) + std::to_string(octave) + ")";
 }
 
+void Envelope::setZoomFactor(double factor)
+{
+        envelopeValueScale->zoom(factor);
+        envelopeTimeScale->zoom(factor);
+}
+
+void Envelope::moveOrigin(int dx, int dy)
+{
+        GEONKICK_LOG_INFO("dx: " << dx << ", " << dy);
+        originPoint.setX(originPoint.x() + dx);
+        originPoint.setY(originPoint.y() - dy);
+        if (originPoint.x() > 0)
+                originPoint.setX(0);
+        else if (originPoint.x() < -W() * (zoomFactor - 1.0))
+                originPoint.setX(-W() * (zoomFactor - 1.0));
+        if (originPoint.y() > 0)
+                originPoint.setY(0);
+        else if (originPoint.y() < -H() * (zoomFactor - 1.0))
+                originPoint.setY(-H() * (zoomFactor - 1.0));
+}
