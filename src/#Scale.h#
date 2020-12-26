@@ -38,13 +38,8 @@ public:
             ScaleLogarithmic = 1
         };
 
-        enum class Orientation: int {
-             Horizontal = 0,
-             Vertical = 1,
-        };
-
         Scale();
-        virtual ~Scale() = default;
+        ~Scale() = default;
         void setName(const RkString &name);
         RkString name() const;
         void setRange(double from, int to);
@@ -58,16 +53,13 @@ public:
         void setShowAxis(bool show = true);
         bool isShowAxisValue() const;
         void setShowAxisValue(bool show = true);
-        Orientation orientation() const;
-        void setOrientation(Orientation orientation);
 
  protected:
-        const std::vector<AxisValue>& getAxisValues() const;
+        std::vector<AxisValue>& getAxisValues() const;
         RkPoint axisValuePosition(double value) const;
         RkString axisValueText(double value) const;
-        void drawName(RkPainter &painter);
         void drawAxis(RkPainter &painter);
-        void drawAxisValue(RkPainter &painter, const AxisValue &val);
+        void drawAxisValue(RkPainter &painter, const std::vector<AxisValue> &val);
         void updateAxisValuesPosition();
         void updateAxisValuesText();
         
@@ -80,7 +72,6 @@ public:
         };        
         RkString scaleName;
         ScaleType scaleType;
-        Orientation scaleOrientation;
         double startRange;
         double endRange;
         RkSize scaleSize;

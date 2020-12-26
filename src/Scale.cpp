@@ -21,13 +21,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
+#include "Scale.h"
+
 Scale::Scale()
-        : scaleType{ScaleType::Linear}
+        : scaleType{ScaleType::ScaleLinear}
+        , scaleOrientation{Orientation::Horizontal}
         , startRange{0.0}
         , endRange{0.0}
         , showAxis {true}
         , showAxisValue{true}
-        , showAxisValeLine{true}
 {
 }
 
@@ -75,59 +77,50 @@ void Scale::draw(RkPainter &painter)
         if (isShowAxis())
                 drawAxis(painter);
 
-        for (const auto &val: axisValues()) {
-                if (val.value >= getRangeFrom() && val.value <= getRangeTo()) {
-                        if (isShowAxisValue())
-                                drawAxisValue(val);
+        if (isShowAxisValue()) {
+                for (const auto &val: getAxisValues()) {
+                        if (val.value >= getRangeFrom() && val.value <= getRangeTo())
+                                drawAxisValue(painter, val);
                 }
         }
         painter.translate(RkPoint(-position().x(), -position().y()));
 }
 
+void Scale::drawName(RkPainter &painter)
+{
+}
+
 void Scale::drawAxis(RkPainter &painter)
 {
-        if (orientation() == ScaleOrientation::Horizontal)
+        if (orientation() == Orientation::Horizontal)
                 painter.drawLine(0, 0, size().width() - 1, 0);
         else
                 painter.drawLine(size().width() - 1, 0, size().width() - 1, size().height() - 1);
 }
  
-void Scale::drawAxisValue(RkPainter &painter, const std::vector<AvisValue> &val)
+void Scale::drawAxisValue(RkPainter &painter, const AxisValue &val)
 {
         RkFont font = painter.font();
         RkRect rect(val.position.x(), val.position.y() - font.size() / 2, 25, font.size());
         painter.drawText(rect, val.text);
 }
 
-void Scale::setSize(const RkSize &size)
+void Scale::updateAxisValuesPosition()
 {
-        scaleSize = size;
-        updateAxisValuesPosition();
 }
 
-RkSize& Scale::size() const
+void Scale::updateAxisValuesText()
 {
-        return scaleSize;
 }
 
-void Scale::setPosition(const RkPoint &pos)
-{
-        scalePosition = pos;
-}
-
-RkPoint& Scale::position() const
-{
-        return scalePosition;
-}
-
-ScaleType Scale::type() const
+Scale::ScaleType Scale::type() const
 {
         return scaleType;
 }
 
 void Scale::SetType(ScaleType type)
 {
-        scaletype = type;
+        scaleType = type;
 }
 
 bool Scale::isShowAxis() const
@@ -135,7 +128,7 @@ bool Scale::isShowAxis() const
         return showAxis;
 }
  
-void Scale::setShowAxis(bool show = true)
+void Scale::setShowAxis(bool show)
 {
         showAxis = show;
 }
@@ -144,19 +137,29 @@ bool Scale::isShowAxisValue() const
 {
         return showAxisValue;
 }
- 
-void Scale::setShowAxisValue(bool show = true)
+
+Scale::Orientation Scale::orientation() const
 {
-        showAxisValue = true;
+        return scaleOrientation;
+}
+
+void Scale::setOrientation(Orientation orientation)
+{
+        scaleOrientation = orientation;
 }
  
-bool Scale::isShowAxisValeLine() const
+void Scale::setShowAxisValue(bool show)
 {
-        return showAxisValeLine;
+        showAxisValue = show;
 }
  
-void Scale::setShowAxisValeLine(bool show = true)
+const std::vector<Scale::AxisValue>& Scale::getAxisValues() const
 {
-        showAxisValeLine = show;
+        return axisValues;
+}
+
+RkPoint Scale::axisValuePosition(double value) const
+{
+        return RkPoint();
 }
 

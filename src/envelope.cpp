@@ -44,10 +44,9 @@ Envelope::Envelope(const RkRect &area)
         , envelopeCategory{Category::Oscillator1}
         , envelopeType{Type::Amplitude}
         , zoomFactor{1.0}
-        , envelopeImage{drawingArea.width() }
-        , envelopeTimeScale{std::make_unique<LinearScale>((ScaleAbstract::Horizontal))}
-        , envelopeTimeScale{std::make_unique<TimeScale>()}
 {
+        envelopeAxes.setSize(drawingArea.size());
+        envelopeAxes.setPosition(drawingArea.topLeft());
 }
 
 int Envelope::W(void) const
@@ -67,33 +66,33 @@ RkPoint Envelope::getOrigin(void) const
 
 void Envelope::draw(RkPainter &painter, DrawLayer layer)
 {
-        if (layer == DrawLayer::Axies) {
-                drawAxies(painter);
-                drawScale(painter);
-        } else if (layer == DrawLayer::Envelope) {
-                RkPainter paint(&envelopeImage);
-                paint.fillRect({0, 0, 0, 255});
-                drawPoints(paint);
-                drawLines(paint);
-                painter.drawImage();
-        }
+        if (layer == DrawLayer::Axes)
+                envelopeAxes.draw(painter);
+        //        if (layer == DrawLayer::Envelope)
+                //                drawPoints(painter);
+                //                drawLines(painter);
 }
 
 void Envelope::drawAxies(RkPainter & painter)
 {
-        auto pen = painter.pen();
+        /*        auto pen = painter.pen();
         pen.setColor(RkColor(125, 125, 125));
         pen.setWidth(1);
         painter.setPen(pen);
-        RkPoint point = getOrigin();
-        painter.drawLine(point.x(),
-                         point.y(),
-                         (point.x() + W() + 10),
-                         point.y());
+        RkRect  paddingRect = padding();
+        painter.drawLine(origin().x(),
+                         origin().y(),
+                         origin().x() + size().width() - 1 - padding().right(),
+                         origin().y());
+        painter.drawLine(origin().x(),
+                         origin().y() - size().height() - 1 + padding().top() ,
+                         origin().x(),
+                         origin().y());
+
         painter.drawLine(point.x(),
                          point.y(),
                          point.x(),
-                         (point.y() - H() - 10));
+                         (point.y() - H() - 10));*/
 }
 
 void Envelope::drawScale(RkPainter &painter)
@@ -628,8 +627,8 @@ std::string Envelope::frequencyToNote(rk_real f)
 
 void Envelope::setZoomFactor(double factor)
 {
-        envelopeValueScale->zoom(factor);
-        envelopeTimeScale->zoom(factor);
+        //        envelopeValueScale->zoom(factor);
+        //        envelopeTimeScale->zoom(factor);
 }
 
 void Envelope::moveOrigin(int dx, int dy)

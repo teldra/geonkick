@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.7)
 
-project(geonkick VERSION 2.6.0)
+project(geonkick VERSION 2.8.0)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 include(GNUInstallDirs)
@@ -110,6 +110,9 @@ set(GKICK_COMMON_HEADERS
   ${GKICK_COMMON_DIR}/distortion_group_box.h
   ${GKICK_COMMON_DIR}/layers_group_box.h
   ${GKICK_COMMON_DIR}/general_group_box.h
+  ${GKICK_COMMON_DIR}/GraphicsItem.h
+  ${GKICK_COMMON_DIR}/Scale.h
+  ${GKICK_COMMON_DIR}/Axes.h
   ${GKICK_COMMON_DIR}/envelope.h
   ${GKICK_COMMON_DIR}/BufferView.h
   ${GKICK_COMMON_DIR}/kick_graph.h
@@ -160,6 +163,9 @@ set(GKICK_COMMON_SOURCES
   ${GKICK_COMMON_DIR}/distortion_group_box.cpp
   ${GKICK_COMMON_DIR}/layers_group_box.cpp
   ${GKICK_COMMON_DIR}/general_group_box.cpp
+  ${GKICK_COMMON_DIR}/GraphicsItem.cpp
+  ${GKICK_COMMON_DIR}/Scale.cpp
+  ${GKICK_COMMON_DIR}/Axes.cpp
   ${GKICK_COMMON_DIR}/envelope.cpp
   ${GKICK_COMMON_DIR}/BufferView.cpp
   ${GKICK_COMMON_DIR}/kick_graph.cpp

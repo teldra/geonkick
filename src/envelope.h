@@ -25,6 +25,7 @@
 #define GEONKICK_ENVELOPE_H
 
 #include "geonkick_api.h"
+#include "Axes.h"
 
 #include <RkPainter.h>
 #include <RkRealPoint.h>
@@ -38,7 +39,7 @@ class Envelope : public RkObject
  public:
 
         enum class DrawLayer {
-                Axies,
+                Axes,
                 Envelope
         };
 
@@ -119,6 +120,7 @@ class Envelope : public RkObject
 
  private:
         RkRect drawingArea;
+        Axes envelopeAxes;
         std::vector<RkRealPoint> envelopePoints;
         int pointRadius;
         int dotRadius;

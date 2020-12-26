@@ -77,7 +77,7 @@ void EnvelopeWidgetDrawingArea::paintWidget([[maybe_unused]] RkPaintEvent *event
                 kickGraphics->updateGraphBuffer();
 
         if (currentEnvelope)
-                currentEnvelope->draw(painter, Envelope::DrawLayer::Axies);
+                currentEnvelope->draw(painter, Envelope::DrawLayer::Axes);
 
         if (currentEnvelope && !isHideEnvelope())
                 currentEnvelope->draw(painter, Envelope::DrawLayer::Envelope);
