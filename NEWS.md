@@ -4,7 +4,7 @@
 
   - Fix crash when opening multiple GUI for LV2
   - Find rapidjson when configuring at build
-  - add musl compatibility patch (Teldra / @teldra@likeable.space)
+  - add musl compatibility patch (Teldra / teldra@rotce.de)
 
 #### Features
 
